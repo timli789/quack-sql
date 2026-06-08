@@ -1,5 +1,13 @@
 import os
 import duckdb
+
+# Load environment variables from .env file if it exists
+if os.path.exists(".env"):
+    with open(".env") as f:
+        for line in f:
+            if line.strip() and not line.startswith("#") and "=" in line:
+                key, val = line.strip().split("=", 1)
+                os.environ[key.strip()] = val.strip()
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
