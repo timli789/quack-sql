@@ -47,14 +47,24 @@ def execute_sql(sql_query: str) -> str:
         return f"Error executing query: {str(e)}"
 
 @mcp.tool()
-def analyze_win_rates(ticker_pattern: str, min_volume: int = 1000) -> str:
+def analyze_win_rates(ticker_pattern: str, min_volume: int = 1000, exclude_non_sports: bool = True) -> str:
     """Analyze the win rates of resolved Kalshi markets matching a ticker pattern (e.g. 'KXWC%' or 'KXMLB%'),
     grouped by 5-cent price increments of the trades.
     Filters:
       - Only includes finalized/resolved markets (status = 'finalized' and result is 'yes' or 'no')
       - Only includes markets with total volume >= min_volume (to exclude thin/untraded options)
+      - exclude_non_sports (default True): Filters out non-sports topics (like announcer mentions or theme songs) for World Cup markets.
     """
-    query = """
+    sports_filter = ""
+    if exclude_non_sports:
+        sports_filter = """
+          AND ticker NOT LIKE 'KXWCMENTION%'
+          AND ticker NOT LIKE 'KXWCUPSONG%'
+          AND title NOT LIKE '%announcer%'
+          AND title NOT LIKE '%sing%'
+        """
+
+    query = f"""
     WITH filtered_markets AS (
         SELECT ticker, result
         FROM kalshi_markets
@@ -63,6 +73,7 @@ def analyze_win_rates(ticker_pattern: str, min_volume: int = 1000) -> str:
           AND result IS NOT NULL 
           AND result IN ('yes', 'no')
           AND volume >= ?
+          {sports_filter}
     ),
     wc_trades AS (
         SELECT 
